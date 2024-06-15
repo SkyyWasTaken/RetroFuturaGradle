@@ -164,11 +164,12 @@ public interface IMinecraftyExtension {
         getMcpMappingChannel().finalizeValueOnRead();
         getMcpMappingVersion().convention(getMcVersion().map(ver -> switch (ver) {
             case "1.7.10" -> "12";
+            case "1.8.9" -> "22";
             case "1.12.2" -> "39";
             default -> throw new UnsupportedOperationException("Unsupported MC version " + ver);
         }));
         getMcpMappingVersion().finalizeValueOnRead();
-        getUseForgeEmbeddedMappings().convention(getMinorMcVersion().map(ver -> ver <= 8));
+        getUseForgeEmbeddedMappings().convention(getMinorMcVersion().map(ver -> ver == 7));
         getUseForgeEmbeddedMappings().finalizeValueOnRead();
         getFernflowerArguments().convention(Lists.newArrayList("-din=1", "-rbr=0", "-dgs=1", "-asc=1", "-log=ERROR"));
         getFernflowerArguments().finalizeValueOnRead();
@@ -191,6 +192,7 @@ public interface IMinecraftyExtension {
     default Provider<String> getForgeVersion() {
         return getMcVersion().map(mcVer -> switch (mcVer) {
             case "1.7.10" -> "1.7.10-10.13.4.1614-1.7.10";
+            case "1.8.9" -> "1.8.9-11.15.1.2318-1.8.9";
             case "1.12.2" -> "1.12.2-14.23.5.2847";
             default -> throw new UnsupportedOperationException();
         });

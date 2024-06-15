@@ -97,8 +97,12 @@ public abstract class DecompileTask extends DefaultTask implements IJarTransform
         final int minorMcVer = getMinorMcVersion().get();
 
         final DigestUtils digests = new DigestUtils(DigestUtils.getSha256Digest());
-        final String fernflowerChecksum = (minorMcVer <= 8) ? digests.digestAsHex(getFernflower().get().getAsFile())
-                : "1.0.342";
+        final String fernflowerChecksum = switch(minorMcVer) {
+            case 7 -> digests.digestAsHex(getFernflower().get().getAsFile());
+            case 8, 12 -> "1.0.342";
+            default -> throw new UnsupportedOperationException("Unsupported MC minor: " + minorMcVer);
+        };
+
         final String inputFileChecksum = digests.digestAsHex(getInputJar().get().getAsFile());
         final File cachedOutputFile = new File(
                 getCacheDir().get().getAsFile(),
@@ -123,10 +127,11 @@ public abstract class DecompileTask extends DefaultTask implements IJarTransform
         final File ffinpcopy = new File(taskTempDir, "mc.jar");
         final File ffoutfile = new File(ffoutdir, "mc.jar");
         FileUtils.copyFile(getInputJar().get().getAsFile(), ffinpcopy);
-        if (minorMcVer <= 8) {
-            decompileFg12(project, ffoutdir, ffinpcopy);
-        } else {
-            decompileFg23(project, ffoutdir, ffinpcopy);
+        switch(minorMcVer) {
+            case 7 -> decompileFg12(project, ffoutdir, ffinpcopy);
+            case 8 -> decompileFg21(project, ffoutdir, ffinpcopy);
+            case 12 -> decompileFg23(project, ffoutdir, ffinpcopy);
+            default -> throw new UnsupportedOperationException("Unsupported MC minor: " + minorMcVer);
         }
         FileUtils.delete(ffinpcopy);
 
@@ -167,6 +172,28 @@ public abstract class DecompileTask extends DefaultTask implements IJarTransform
         }).assertNormalExitValue();
     }
 
+    private void decompileFg21(Project project, File ffoutdir, File ffinpcopy) {
+        final File tempDir = getTemporaryDir();
+        final WorkQueue queue = getWorkerExecutor().processIsolation(pws -> {
+            final JavaForkOptions fork = pws.getForkOptions();
+            fork.setMinHeapSize("3072M");
+            fork.setMaxHeapSize("3072M");
+            final String javaExe = getJava8Launcher().get().getExecutablePath().getAsFile().getAbsolutePath();
+            // We can't use Java 17 so at least use some tuning options that are the defaults in newer versions
+            fork.jvmArgs("-XX:+UnlockExperimentalVMOptions", "-XX:+UseG1GC", "-XX:+AggressiveOpts");
+            fork.executable(javaExe);
+        });
+        queue.submit(Fg21DecompTask.class, args -> {
+            // setup args
+            args.getTempDir().set(tempDir);
+            args.getLogFile().set(FileUtils.getFile(project.getBuildDir(), MCPTasks.RFG_DIR, "fernflower_log.log"));
+            args.getInputJar().set(ffinpcopy);
+            args.getOutputDir().set(ffoutdir);
+            args.getClasspath().setFrom(this.getClasspath());
+        });
+        queue.await();
+    }
+
     private void decompileFg23(Project project, File ffoutdir, File ffinpcopy) {
         final File tempDir = getTemporaryDir();
         final WorkQueue queue = getWorkerExecutor().processIsolation(pws -> {
@@ -189,7 +216,7 @@ public abstract class DecompileTask extends DefaultTask implements IJarTransform
         queue.await();
     }
 
-    public interface Fg23DecompArgs extends WorkParameters {
+    public interface Fg2xDecompArgs extends WorkParameters {
 
         DirectoryProperty getTempDir();
 
@@ -202,12 +229,56 @@ public abstract class DecompileTask extends DefaultTask implements IJarTransform
         ConfigurableFileCollection getClasspath();
     }
 
-    public static abstract class Fg23DecompTask implements WorkAction<Fg23DecompArgs> {
+    public static abstract class Fg21DecompTask implements WorkAction<Fg2xDecompArgs> {
 
         @Override
         public void execute() {
             try {
-                Fg23DecompArgs settings = getParameters();
+                Fg2xDecompArgs settings = getParameters();
+
+                Map<String, Object> mapOptions = new HashMap<>();
+                // "-din=1", "-rbr=1", "-dgs=1", "-asc=1", "-rsy=1", "-iec=1", "-jvn=1", "-log=TRACE", "-cfg",
+                // "{libraries}", "{input}", "{output}"
+                mapOptions.put(com.gtnewhorizons.retrofuturagradle.fg21shadow.org.jetbrains.java.decompiler.main.extern.IFernflowerPreferences.DECOMPILE_INNER, "1");
+                mapOptions.put(com.gtnewhorizons.retrofuturagradle.fg21shadow.org.jetbrains.java.decompiler.main.extern.IFernflowerPreferences.DECOMPILE_GENERIC_SIGNATURES, "1");
+                mapOptions.put(com.gtnewhorizons.retrofuturagradle.fg21shadow.org.jetbrains.java.decompiler.main.extern.IFernflowerPreferences.ASCII_STRING_CHARACTERS, "1");
+                mapOptions.put(com.gtnewhorizons.retrofuturagradle.fg21shadow.org.jetbrains.java.decompiler.main.extern.IFernflowerPreferences.INCLUDE_ENTIRE_CLASSPATH, "1");
+                mapOptions.put(com.gtnewhorizons.retrofuturagradle.fg21shadow.org.jetbrains.java.decompiler.main.extern.IFernflowerPreferences.REMOVE_SYNTHETIC, "1");
+                mapOptions.put(com.gtnewhorizons.retrofuturagradle.fg21shadow.org.jetbrains.java.decompiler.main.extern.IFernflowerPreferences.REMOVE_BRIDGE, "1");
+                mapOptions.put(com.gtnewhorizons.retrofuturagradle.fg21shadow.org.jetbrains.java.decompiler.main.extern.IFernflowerPreferences.LITERALS_AS_IS, "0");
+                mapOptions.put(com.gtnewhorizons.retrofuturagradle.fg21shadow.org.jetbrains.java.decompiler.main.extern.IFernflowerPreferences.UNIT_TEST_MODE, "0");
+                mapOptions.put(com.gtnewhorizons.retrofuturagradle.fg21shadow.org.jetbrains.java.decompiler.main.extern.IFernflowerPreferences.MAX_PROCESSING_METHOD, "0");
+                mapOptions.put(com.gtnewhorizons.retrofuturagradle.fg21shadow.org.jetbrains.java.decompiler.main.DecompilerContext.RENAMER_FACTORY, com.gtnewhorizons.retrofuturagradle.mcp.fg21.AdvancedJadRenamer.Factory.class.getName());
+
+                // FernFlowerSettings settings = new FernFlowerSettings(tempDir, in, tempJar,
+                // Constants.getTaskLogFile(getProject(), getName() + ".log"), classpath.getFiles(), mapOptions);
+
+                com.gtnewhorizons.retrofuturagradle.fg21shadow.org.jetbrains.java.decompiler.main.decompiler.PrintStreamLogger logger = new  com.gtnewhorizons.retrofuturagradle.fg21shadow.org.jetbrains.java.decompiler.main.decompiler.PrintStreamLogger(
+                        new PrintStream(settings.getLogFile().getAsFile().get()));
+                com.gtnewhorizons.retrofuturagradle.fg21shadow.org.jetbrains.java.decompiler.main.decompiler.BaseDecompiler decompiler = new com.gtnewhorizons.retrofuturagradle.fg21shadow.org.jetbrains.java.decompiler.main.decompiler.BaseDecompiler(
+                        new com.gtnewhorizons.retrofuturagradle.mcp.fg21.ByteCodeProvider(),
+                        new com.gtnewhorizons.retrofuturagradle.mcp.fg21.ArtifactSaver(settings.getOutputDir().getAsFile().get()),
+                        mapOptions,
+                        logger);
+
+                decompiler.addSpace(settings.getInputJar().getAsFile().get(), true);
+                for (File library : settings.getClasspath()) {
+                    decompiler.addSpace(library, false);
+                }
+
+                decompiler.decompileContext();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    public static abstract class Fg23DecompTask implements WorkAction<Fg2xDecompArgs> {
+
+        @Override
+        public void execute() {
+            try {
+                Fg2xDecompArgs settings = getParameters();
 
                 Map<String, Object> mapOptions = new HashMap<>();
                 // "-din=1", "-rbr=1", "-dgs=1", "-asc=1", "-rsy=1", "-iec=1", "-jvn=1", "-log=TRACE", "-cfg",

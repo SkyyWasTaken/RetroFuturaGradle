@@ -474,6 +474,30 @@ public final class MinecraftTasks {
                         deps.add(VANILLA_MC_CFG, "org.apache.logging.log4j:log4j-api:2.0-beta9");
                         deps.add(VANILLA_MC_CFG, "org.apache.logging.log4j:log4j-core:2.0-beta9");
                     }
+                    case "1.8.9" -> {
+                        deps.add(VANILLA_MC_CFG, "com.mojang:netty:1.8.8");
+                        deps.add(VANILLA_MC_CFG, "oshi-project:oshi-core:1.1");
+                        deps.add(VANILLA_MC_CFG, "net.java.dev.jna:jna:3.4.0");
+                        deps.add(VANILLA_MC_CFG, "net.java.dev.jna:platform:3.4.0");
+                        deps.add(VANILLA_MC_CFG, "com.ibm.icu:icu4j-core-mojang:51.2");
+                        deps.add(VANILLA_MC_CFG, "net.sf.jopt-simple:jopt-simple:4.6");
+                        deps.add(VANILLA_MC_CFG, "io.netty:netty-all:4.0.23.Final");
+                        deps.add(VANILLA_MC_CFG, "com.google.guava:guava:17.0");
+                        deps.add(VANILLA_MC_CFG, "org.apache.commons:commons-lang3:3.2");
+                        deps.add(VANILLA_MC_CFG, "commons-io:commons-io:2.4");
+                        deps.add(VANILLA_MC_CFG, "commons-codec:commons-codec:1.9");
+                        deps.add(VANILLA_MC_CFG, "net.java.jinput:jinput:2.0.5");
+                        deps.add(VANILLA_MC_CFG, "net.java.jutils:jutils:1.0.0");
+                        deps.add(VANILLA_MC_CFG, "com.google.code.gson:gson:2.2.4");
+                        deps.add(VANILLA_MC_CFG, "com.mojang:authlib:1.5.21");
+                        deps.add(VANILLA_MC_CFG, "com.mojang:realms:1.7.59");
+                        deps.add(VANILLA_MC_CFG, "org.apache.commons:commons-compress:1.8.1");
+                        deps.add(VANILLA_MC_CFG, "org.apache.httpcomponents:httpclient:4.3.3");
+                        deps.add(VANILLA_MC_CFG, "commons-logging:commons-logging:1.1.3");
+                        deps.add(VANILLA_MC_CFG, "org.apache.httpcomponents:httpcore:4.3.2");
+                        deps.add(VANILLA_MC_CFG, "org.apache.logging.log4j:log4j-api:2.0-beta9");
+                        deps.add(VANILLA_MC_CFG, "org.apache.logging.log4j:log4j-core:2.0-beta9");
+                    }
                     case "1.12.2" -> {
                         deps.add(VANILLA_MC_CFG, "com.mojang:patchy:1.3.9");
                         deps.add(VANILLA_MC_CFG, "oshi-project:oshi-core:1.1");
@@ -537,11 +561,20 @@ public final class MinecraftTasks {
                 deps.add(LWJGL3_CFG, "org.lwjgl:lwjgl-stb:" + lwjgl3Version + ":" + lwjgl3Natives);
                 deps.add(LWJGL3_CFG, "org.lwjgl:lwjgl-tinyfd:" + lwjgl3Version + ":" + lwjgl3Natives);
 
-                if (mcMinor <= 8) {
-                    deps.add(VANILLA_MC_CFG, "tv.twitch:twitch:5.16");
-                    if (SystemUtils.IS_OS_WINDOWS) {
-                        deps.add(VANILLA_MC_CFG, "tv.twitch:twitch-platform:5.16:natives-windows-64");
-                        deps.add(VANILLA_MC_CFG, "tv.twitch:twitch-external-platform:4.5:natives-windows-64");
+                switch(mcMinor) {
+                    case 7 -> {
+                        deps.add(VANILLA_MC_CFG, "tv.twitch:twitch:5.16");
+                        if (SystemUtils.IS_OS_WINDOWS) {
+                            deps.add(VANILLA_MC_CFG, "tv.twitch:twitch-platform:5.16:natives-windows-64");
+                            deps.add(VANILLA_MC_CFG, "tv.twitch:twitch-external-platform:4.5:natives-windows-64");
+                        }
+                    }
+                    case 8 -> {
+                        deps.add(VANILLA_MC_CFG, "tv.twitch:twitch:6.5");
+                        if (SystemUtils.IS_OS_WINDOWS) {
+                            deps.add(VANILLA_MC_CFG, "tv.twitch:twitch-platform:6.5:natives-windows-64");
+                            deps.add(VANILLA_MC_CFG, "tv.twitch:twitch-external-platform:4.5:natives-windows-64");
+                        }
                     }
                 }
             }

@@ -73,13 +73,13 @@ public class SharedMCPTasks<McExtType extends IMinecraftyExtension> {
             task.setGroup(TASK_GROUP_INTERNAL);
             task.src(Constants.URL_FERNFLOWER_1);
             final Provider<Integer> minorMcVersion = mcExt.getMinorMcVersion();
-            task.onlyIf(t -> minorMcVersion.get() <= 8 && !fernflower1Location.exists());
+            task.onlyIf(t -> minorMcVersion.get() == 7 && !fernflower1Location.exists());
             task.overwrite(false);
             task.onlyIfModified(true);
             task.useETag(true);
             task.dest(fernflower1DownloadLocation);
             task.doLast(_t -> {
-                if (mcExt.getMinorMcVersion().get() > 8) {
+                if (mcExt.getMinorMcVersion().get() > 7) {
                     return;
                 }
                 try (final FileInputStream fis = new FileInputStream(fernflower1DownloadLocation);
@@ -123,9 +123,17 @@ public class SharedMCPTasks<McExtType extends IMinecraftyExtension> {
                     // inputs
                     Provider<Integer> mcVer = mcExt.getMinorMcVersion();
                     task.getInputSrg().set(
-                            mcVer.flatMap(v -> (v <= 8) ? userdevFile("conf/packaged.srg") : mcpFile("joined.srg")));
+                            mcVer.flatMap(v -> switch(v) {
+                                case 7 -> userdevFile("conf/packaged.srg");
+                                case 8, 12 -> mcpFile("joined.srg");
+                                default -> throw new UnsupportedOperationException("Unsupported MC minor: " + v);
+                            }));
                     task.getInputExc().set(
-                            mcVer.flatMap(v -> (v <= 8) ? userdevFile("conf/packaged.exc") : mcpFile("joined.exc")));
+                            mcVer.flatMap(v -> switch (v) {
+                                case 7 -> userdevFile("conf/packaged.exc");
+                                case 8, 12 -> mcpFile("joined.exc");
+                                default -> throw new UnsupportedOperationException("Unsupported MC minor: " + v);
+                            }));
                     task.getFieldsCsv().set(
                             mcExt.getUseForgeEmbeddedMappings().flatMap(
                                     useForge -> useForge.booleanValue() ? userdevFile("conf/fields.csv")

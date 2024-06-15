@@ -151,7 +151,7 @@ public abstract class RunMinecraftTask extends JavaExec {
         if (side == Distribution.CLIENT) {
             final String mcVer = getMcVersion().get();
             final String argVer = switch (mcVer) {
-                case "1.12.2" -> "FML_DEV";
+                case "1.12.2", "1.8.9" -> "FML_DEV";
                 default -> mcVer;
             };
             args.addAll(

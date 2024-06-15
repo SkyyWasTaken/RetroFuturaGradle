@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
+import com.gtnewhorizons.retrofuturagradle.fgpatchers.McpCleanupFg21;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.gradle.api.DefaultTask;
@@ -126,12 +127,13 @@ public abstract class CleanupDecompiledJarTask extends DefaultTask implements IJ
 
         loadedSources = loadedSources.entrySet().parallelStream().map(entry -> {
             try {
-                final String patched;
-                if (mcMinor <= 8) {
-                    patched = FFPatcher.processFile(entry.getKey(), entry.getValue(), true);
-                } else {
-                    patched = com.gtnewhorizons.retrofuturagradle.mcp.fg23.FFPatcher.processFile(entry.getValue());
-                }
+                final String patched = switch (mcMinor) {
+                    case 7 -> FFPatcher.processFile(entry.getKey(), entry.getValue(), true);
+                    case 8 -> com.gtnewhorizons.retrofuturagradle.mcp.fg21.FFPatcher.processFile(entry.getValue());
+                    case 12 -> com.gtnewhorizons.retrofuturagradle.mcp.fg23.FFPatcher.processFile(entry.getValue());
+                    default ->
+                            throw new UnsupportedOperationException("Unsupported minor MC minor version: " + mcMinor);
+                };
                 return MutablePair.of(entry.getKey(), patched);
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -189,6 +191,9 @@ public abstract class CleanupDecompiledJarTask extends DefaultTask implements IJ
             .compile("(?m)(?:\\r\\n|\\r|\\n)((?:\\r\\n|\\r|\\n)[ \\t]+(case|default))");
 
     private static final ThreadLocal<ASFormatter> formattersFG12 = new ThreadLocal<>();
+
+    private static final ThreadLocal<com.gtnewhorizons.retrofuturagradle.fg21shadow.com.github.abrarsyed.jastyle.ASFormatter> formattersFG21 = new ThreadLocal<>();
+
     private static final ThreadLocal<com.gtnewhorizons.retrofuturagradle.fg23shadow.com.github.abrarsyed.jastyle.ASFormatter> formattersFG23 = new ThreadLocal<>();
 
     private File applyMcpCleanup() throws IOException {
@@ -202,55 +207,74 @@ public abstract class CleanupDecompiledJarTask extends DefaultTask implements IJ
                 final String filePath = entry.getKey();
                 String text = entry.getValue();
                 ASFormatter formatterFG12 = formattersFG12.get();
+                com.gtnewhorizons.retrofuturagradle.fg21shadow.com.github.abrarsyed.jastyle.ASFormatter formatterFG21 = formattersFG21
+                        .get();
                 com.gtnewhorizons.retrofuturagradle.fg23shadow.com.github.abrarsyed.jastyle.ASFormatter formatterFG23 = formattersFG23
                         .get();
-                if (mcMinor <= 8) {
-                    if (formatterFG12 == null) {
-                        formatterFG12 = new ASFormatter();
-                        OptParser parser = new OptParser(formatterFG12);
-                        parser.parseOptionFile(astyleOptions);
-                        formattersFG12.set(formatterFG12);
+                switch (mcMinor) {
+                    case 7 -> {
+                        if (formatterFG12 == null) {
+                            formatterFG12 = new ASFormatter();
+                            OptParser parser = new OptParser(formatterFG12);
+                            parser.parseOptionFile(astyleOptions);
+                            formattersFG12.set(formatterFG12);
+                        }
+                        text = McpCleanupFg12.stripComments(text);
+                        text = McpCleanupFg12.fixImports(text);
+                        text = McpCleanupFg12.cleanup(text);
                     }
-                } else {
-                    if (formatterFG23 == null) {
-                        formatterFG23 = new com.gtnewhorizons.retrofuturagradle.fg23shadow.com.github.abrarsyed.jastyle.ASFormatter();
-                        formatterFG23.setUseProperInnerClassIndenting(false);
-                        com.gtnewhorizons.retrofuturagradle.fg23shadow.com.github.abrarsyed.jastyle.OptParser parser = new com.gtnewhorizons.retrofuturagradle.fg23shadow.com.github.abrarsyed.jastyle.OptParser(
-                                formatterFG23);
-                        parser.parseOptionFile(astyleOptions);
-                        formattersFG23.set(formatterFG23);
+                    case 8 -> {
+                        if (formatterFG21 == null) {
+                            formatterFG21 = new com.gtnewhorizons.retrofuturagradle.fg21shadow.com.github.abrarsyed.jastyle.ASFormatter();
+                            formatterFG21.setUseProperInnerClassIndenting(false);
+                            com.gtnewhorizons.retrofuturagradle.fg21shadow.com.github.abrarsyed.jastyle.OptParser parser = new com.gtnewhorizons.retrofuturagradle.fg21shadow.com.github.abrarsyed.jastyle.OptParser(
+                                    formatterFG21);
+                            parser.parseOptionFile(astyleOptions);
+                            formattersFG21.set(formatterFG21);
+                        }
+                        text = McpCleanupFg21.stripComments(text);
+                        text = McpCleanupFg21.fixImports(text);
+                        text = McpCleanupFg21.cleanup(text);
                     }
-                }
-
-                if (mcMinor <= 8) {
-                    text = McpCleanupFg12.stripComments(text);
-                    text = McpCleanupFg12.fixImports(text);
-                    text = McpCleanupFg12.cleanup(text);
-                } else {
-                    text = McpCleanupFg23.stripComments(text);
-                    text = McpCleanupFg23.fixImports(text);
-                    text = McpCleanupFg23.cleanup(text);
+                    case 12 -> {
+                        if (formatterFG23 == null) {
+                            formatterFG23 = new com.gtnewhorizons.retrofuturagradle.fg23shadow.com.github.abrarsyed.jastyle.ASFormatter();
+                            formatterFG23.setUseProperInnerClassIndenting(false);
+                            com.gtnewhorizons.retrofuturagradle.fg23shadow.com.github.abrarsyed.jastyle.OptParser parser = new com.gtnewhorizons.retrofuturagradle.fg23shadow.com.github.abrarsyed.jastyle.OptParser(
+                                    formatterFG23);
+                            parser.parseOptionFile(astyleOptions);
+                            formattersFG23.set(formatterFG23);
+                        }
+                        text = McpCleanupFg23.stripComments(text);
+                        text = McpCleanupFg23.fixImports(text);
+                        text = McpCleanupFg23.cleanup(text);
+                    }
                 }
 
                 text = glFixer.fixOGL(text);
 
                 try (Reader reader = new StringReader(text); StringWriter writer = new StringWriter()) {
-                    if (mcMinor <= 8) {
-                        formatterFG12.format(reader, writer);
-                    } else {
-                        formatterFG23.format(reader, writer);
+                    switch(mcMinor) {
+                        case 7 -> formatterFG12.format(reader, writer);
+                        case 8 -> formatterFG21.format(reader, writer);
+                        case 12 -> formatterFG23.format(reader, writer);
+                        default -> throw new UnsupportedOperationException("Unsupported MC Minor: " + mcMinor);
                     }
                     text = writer.toString();
                 }
 
-                if (mcMinor <= 8) {
-                    text = BEFORE_RULE.matcher(text).replaceAll("$1");
-                    text = AFTER_RULE.matcher(text).replaceAll("$1");
-                    text = FmlCleanup.renameClass(text);
-                }
-
-                if (mcMinor > 8 && !text.endsWith(System.lineSeparator())) {
-                    text += System.lineSeparator();
+                switch(mcMinor) {
+                    case 7 -> {
+                        text = BEFORE_RULE.matcher(text).replaceAll("$1");
+                        text = AFTER_RULE.matcher(text).replaceAll("$1");
+                        text = FmlCleanup.renameClass(text);
+                    }
+                    case 8, 12 -> {
+                        if (!text.endsWith(System.lineSeparator())) {
+                            text += System.lineSeparator();
+                        }
+                    }
+                    default -> throw new UnsupportedOperationException("Unsupported MC Minor: " + mcMinor);
                 }
 
                 return MutablePair.of(filePath, text);

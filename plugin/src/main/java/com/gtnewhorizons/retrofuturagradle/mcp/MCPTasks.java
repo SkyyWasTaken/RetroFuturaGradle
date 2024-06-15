@@ -172,9 +172,18 @@ public class MCPTasks extends SharedMCPTasks<MinecraftExtension> {
                     task.getOutputJar().set(mergedVanillaJar);
                     task.getMergeConfigFile().set(
                             mcExt.getMinorMcVersion()
-                                    .flatMap(ver -> (ver <= 8) ? userdevFile("conf/mcp_merge.cfg") : null));
+                                    .flatMap(ver -> switch(ver) {
+                                        case 7 -> userdevFile("conf/mcp_merge.cfg");
+                                        case 8, 12 -> null;
+                                        default -> throw new UnsupportedOperationException("Unsupported MC minor version: " + ver);
+                                    }));
                     task.getMergeConfig()
-                            .set(mcExt.getMinorMcVersion().map(ver -> (ver <= 8) ? null : Constants.FG23_MERGE_CONFIG));
+                            .set(mcExt.getMinorMcVersion().map(ver -> switch(ver) {
+                                case 7 -> null;
+                                case 8 -> Constants.FG21_MERGE_CONFIG;
+                                case 12 -> Constants.FG23_MERGE_CONFIG;
+                                default -> throw new UnsupportedOperationException("Unsupported MC minor version: " + ver);
+                            }));
                     task.getMcVersion().set(mcExt.getMcVersion());
                 });
         decompiledMcChain.addTask(taskMergeVanillaSidedJars);
@@ -203,7 +212,11 @@ public class MCPTasks extends SharedMCPTasks<MinecraftExtension> {
                     task.getSrgFile().set(taskGenerateForgeSrgMappings.flatMap(GenSrgMappingsTask::getNotchToSrg));
                     task.getExceptorJson().set(
                             mcExt.getMinorMcVersion().flatMap(
-                                    ver -> (ver <= 8) ? userdevFile("conf/exceptor.json") : mcpFile("exceptor.json")));
+                                    ver -> switch(ver) {
+                                        case 7 -> userdevFile("conf/exceptor.json");
+                                        case 8, 12 -> mcpFile("exceptor.json");
+                                        default -> throw new UnsupportedOperationException("Unsupported MC minor version: " + ver);
+                                    }));
                     task.getExceptorCfg().set(taskGenerateForgeSrgMappings.flatMap(GenSrgMappingsTask::getSrgExc));
                     task.getInputJar().set(taskMergeVanillaSidedJars.flatMap(IJarOutputTask::getOutputJar));
                     task.getOutputJar().set(srgMergedJarLocation);
@@ -225,7 +238,11 @@ public class MCPTasks extends SharedMCPTasks<MinecraftExtension> {
             task.getOutputJar().set(rawDecompiledSrgLocation);
             task.getCacheDir().set(Utilities.getCacheDir(project, "fernflower-cache"));
             task.getFernflower()
-                    .set(layout.file(mcExt.getMinorMcVersion().map(mcVer -> (mcVer <= 8) ? fernflowerLocation : null)));
+                    .set(layout.file(mcExt.getMinorMcVersion().map(mcVer -> switch(mcVer) {
+                        case 7 -> fernflowerLocation;
+                        case 8, 12 -> null;
+                        default -> throw new UnsupportedOperationException("Unsupported MC minor version: " + mcVer);
+                    })));
             task.getMinorMcVersion().set(mcExt.getMinorMcVersion());
             task.getClasspath().from(patchedConfiguration.plus(mcTasks.getLwjgl2Configuration()));
             task.getJava8Launcher().set(mcExt.getToolchainLauncher(project, 8));
@@ -242,15 +259,26 @@ public class MCPTasks extends SharedMCPTasks<MinecraftExtension> {
                     task.getOutputJar().set(decompiledSrgLocation);
                     task.getPatches().set(
                             mcExt.getMinorMcVersion().flatMap(
-                                    mcVer -> (mcVer <= 8) ? userdevDir("conf/minecraft_ff")
-                                            : mcpDir("patches/minecraft_merged_ff/")));
+                                    mcVer -> switch(mcVer) {
+                                        case 7 -> userdevDir("conf/minecraft_ff");
+                                        case 8, 12 -> mcpDir("patches/minecraft_merged_ff/");
+                                        default -> throw new UnsupportedOperationException("Unsupported MC minor version: " + mcVer);
+                                    }));
                     task.getAstyleConfig().set(
                             mcExt.getMinorMcVersion().flatMap(
-                                    mcVer -> (mcVer <= 8) ? userdevFile("conf/astyle.cfg") : mcpFile("astyle.cfg")));
+                                    mcVer -> switch(mcVer) {
+                                        case 7 -> userdevFile("conf/astyle.cfg");
+                                        case 8, 12 ->mcpFile("astyle.cfg");
+                                        default -> throw new UnsupportedOperationException("Unsupported MC minor version: " + mcVer);
+                                    }));
                     task.getMinorMcVersion().set(mcExt.getMinorMcVersion());
                     task.getPatchesInjectDir().set(
                             mcExt.getMinorMcVersion()
-                                    .flatMap(mcVer -> (mcVer <= 8) ? null : mcpDir("patches/inject/")));
+                                    .flatMap(mcVer -> switch (mcVer) {
+                                        case 7, 8 -> null;
+                                        case 12 -> mcpDir("patches/inject/");
+                                        default -> throw new UnsupportedOperationException("Unsupported MC minor version: " + mcVer);
+                                    }));
                 });
         decompiledMcChain.addTask(taskCleanupDecompSrgJar);
 
@@ -261,7 +289,11 @@ public class MCPTasks extends SharedMCPTasks<MinecraftExtension> {
             task.getInputJar().set(taskCleanupDecompSrgJar.flatMap(IJarOutputTask::getOutputJar));
             task.getOutputJar().set(patchedSourcesLocation);
             task.getMaxFuzziness().set(1);
-            task.getPathComponentsToStrip().set(mcExt.getMinorMcVersion().map(mcVer -> (mcVer <= 8) ? 3 : 1));
+            task.getPathComponentsToStrip().set(mcExt.getMinorMcVersion().map(mcVer -> switch(mcVer) {
+                case 7 -> 3;
+                case 8, 12 -> 1;
+                default -> throw new UnsupportedOperationException("Unsupported MC minor version: " + mcVer);
+            }));
         });
         decompiledMcChain.addTask(taskPatchDecompiledJar);
 
@@ -373,22 +405,35 @@ public class MCPTasks extends SharedMCPTasks<MinecraftExtension> {
                     task.getOutputDir().set(launcherSourcesLocation);
 
                     task.addResources("fg[0-9]+/", mcExt.getMinorMcVersion().map(mcMinor -> {
-                        if (mcMinor <= 8) {
-                            return Arrays.asList(
-                                    "fg12/GradleStart.java",
-                                    "fg12/GradleStartServer.java",
-                                    "fg12/net/minecraftforge/gradle/GradleStartCommon.java",
-                                    "fg12/net/minecraftforge/gradle/OldPropertyMapSerializer.java",
-                                    "fg12/net/minecraftforge/gradle/tweakers/CoremodTweaker.java",
-                                    "fg12/net/minecraftforge/gradle/tweakers/AccessTransformerTweaker.java");
-                        } else {
-                            return Arrays.asList(
-                                    "fg23/GradleStart.java",
-                                    "fg23/GradleStartServer.java",
-                                    "fg23/net/minecraftforge/gradle/GradleStartCommon.java",
-                                    "fg23/net/minecraftforge/gradle/GradleForgeHacks.java",
-                                    "fg23/net/minecraftforge/gradle/tweakers/CoremodTweaker.java",
-                                    "fg23/net/minecraftforge/gradle/tweakers/AccessTransformerTweaker.java");
+                        switch (mcMinor) {
+                            case 7 -> {
+                                return Arrays.asList(
+                                        "fg12/GradleStart.java",
+                                        "fg12/GradleStartServer.java",
+                                        "fg12/net/minecraftforge/gradle/GradleStartCommon.java",
+                                        "fg12/net/minecraftforge/gradle/OldPropertyMapSerializer.java",
+                                        "fg12/net/minecraftforge/gradle/tweakers/CoremodTweaker.java",
+                                        "fg12/net/minecraftforge/gradle/tweakers/AccessTransformerTweaker.java");
+                            }
+                            case 8 -> {
+                                return Arrays.asList(
+                                        "fg21/GradleStart.java",
+                                        "fg21/GradleStartServer.java",
+                                        "fg21/net/minecraftforge/gradle/GradleStartCommon.java",
+                                        "fg21/net/minecraftforge/gradle/GradleForgeHacks.java",
+                                        "fg21/net/minecraftforge/gradle/tweakers/CoremodTweaker.java",
+                                        "fg21/net/minecraftforge/gradle/tweakers/AccessTransformerTweaker.java");
+                            }
+                            case 12 -> {
+                                return Arrays.asList(
+                                        "fg23/GradleStart.java",
+                                        "fg23/GradleStartServer.java",
+                                        "fg23/net/minecraftforge/gradle/GradleStartCommon.java",
+                                        "fg23/net/minecraftforge/gradle/GradleForgeHacks.java",
+                                        "fg23/net/minecraftforge/gradle/tweakers/CoremodTweaker.java",
+                                        "fg23/net/minecraftforge/gradle/tweakers/AccessTransformerTweaker.java");
+                            }
+                            default -> throw new UnsupportedOperationException("Unsupported MC minor: " + mcMinor);
                         }
                     }));
 
@@ -423,30 +468,34 @@ public class MCPTasks extends SharedMCPTasks<MinecraftExtension> {
                             taskGenerateForgeSrgMappings.flatMap(GenSrgMappingsTask::getFieldsCsv)
                                     .map(f -> f.getAsFile().getParentFile().getPath()));
                     replacements.putAll(mcExt.getMinorMcVersion().map(mcMinor -> {
-                        if (mcMinor <= 8) {
-                            return ImmutableMap.of(
-                                    "@@BOUNCERCLIENT@@",
-                                    "net.minecraft.launchwrapper.Launch",
-                                    "@@BOUNCERSERVER@@",
-                                    "net.minecraft.launchwrapper.Launch",
-                                    "@@CLIENTTWEAKER@@",
-                                    "cpw.mods.fml.common.launcher.FMLTweaker",
-                                    "@@SERVERTWEAKER@@",
-                                    "cpw.mods.fml.common.launcher.FMLServerTweaker");
-                        } else {
-                            return ImmutableMap.of(
-                                    "@@BOUNCERCLIENT@@",
-                                    "net.minecraft.launchwrapper.Launch",
-                                    "@@BOUNCERSERVER@@",
-                                    "net.minecraft.launchwrapper.Launch",
-                                    "@@TWEAKERCLIENT@@",
-                                    "net.minecraftforge.fml.common.launcher.FMLTweaker",
-                                    "@@TWEAKERSERVER@@",
-                                    "net.minecraftforge.fml.common.launcher.FMLServerTweaker",
-                                    "//@@EXTRALINES@@",
-                                    "net.minecraftforge.gradle.GradleForgeHacks.searchCoremods(this);",
-                                    "// @@EXTRALINES@@",
-                                    "net.minecraftforge.gradle.GradleForgeHacks.searchCoremods(this);");
+                        switch(mcMinor) {
+                            case 7 -> {
+                                return ImmutableMap.of(
+                                        "@@BOUNCERCLIENT@@",
+                                        "net.minecraft.launchwrapper.Launch",
+                                        "@@BOUNCERSERVER@@",
+                                        "net.minecraft.launchwrapper.Launch",
+                                        "@@CLIENTTWEAKER@@",
+                                        "cpw.mods.fml.common.launcher.FMLTweaker",
+                                        "@@SERVERTWEAKER@@",
+                                        "cpw.mods.fml.common.launcher.FMLServerTweaker");
+                            }
+                            case 8, 12 -> {
+                                return ImmutableMap.of(
+                                        "@@BOUNCERCLIENT@@",
+                                        "net.minecraft.launchwrapper.Launch",
+                                        "@@BOUNCERSERVER@@",
+                                        "net.minecraft.launchwrapper.Launch",
+                                        "@@TWEAKERCLIENT@@",
+                                        "net.minecraftforge.fml.common.launcher.FMLTweaker",
+                                        "@@TWEAKERSERVER@@",
+                                        "net.minecraftforge.fml.common.launcher.FMLServerTweaker",
+                                        "//@@EXTRALINES@@",
+                                        "net.minecraftforge.gradle.GradleForgeHacks.searchCoremods(this);",
+                                        "// @@EXTRALINES@@",
+                                        "net.minecraftforge.gradle.GradleForgeHacks.searchCoremods(this);");
+                            }
+                            default -> throw new UnsupportedOperationException("Unsupported MC minor: " + mcMinor);
                         }
                     }));
                 });
@@ -798,8 +847,11 @@ public class MCPTasks extends SharedMCPTasks<MinecraftExtension> {
             task.getMainClass().set("net.minecraft.launchwrapper.Launch");
             task.getTweakClasses().add(
                     mcExt.getMinorMcVersion().map(
-                            v -> (v <= 7) ? "cpw.mods.fml.common.launcher.FMLTweaker"
-                                    : "net.minecraftforge.fml.common.launcher.FMLTweaker"));
+                            v -> switch(v) {
+                                case 7 -> "cpw.mods.fml.common.launcher.FMLTweaker";
+                                case 8, 12 -> "net.minecraftforge.fml.common.launcher.FMLTweaker";
+                                default -> throw new UnsupportedOperationException("Unsupported minor version: " + v);
+                            }));
         });
 
         taskRunObfServer = project.getTasks()
@@ -817,8 +869,11 @@ public class MCPTasks extends SharedMCPTasks<MinecraftExtension> {
             task.classpath(patchedConfiguration);
             task.getMainClass().set(
                     mcExt.getMinorMcVersion().map(
-                            v -> (v <= 7) ? "cpw.mods.fml.relauncher.ServerLaunchWrapper"
-                                    : "net.minecraftforge.fml.relauncher.ServerLaunchWrapper"));
+                            v -> switch(v) {
+                                case 7 -> "cpw.mods.fml.relauncher.ServerLaunchWrapper";
+                                case 8, 12 -> "net.minecraftforge.fml.relauncher.ServerLaunchWrapper";
+                                default -> throw new UnsupportedOperationException("Unsupported minor version: " + v);
+                            }));
             task.getTweakClasses().set(Collections.emptyList());
         });
 
@@ -952,18 +1007,17 @@ public class MCPTasks extends SharedMCPTasks<MinecraftExtension> {
         }
 
         if (mcExt.getUsesFml().get()) {
-            if (mcMinor <= 8) {
-                deobfuscationATs.from(userdevFile(Constants.PATH_USERDEV_FML_ACCESS_TRANFORMER));
+            if (mcMinor == 7) {                deobfuscationATs.from(userdevFile(Constants.PATH_USERDEV_FML_ACCESS_TRANFORMER));
             }
 
-            if (mcMinor <= 8 || mcExt.getUsesForge().get()) {
+            if (mcMinor == 7 || mcExt.getUsesForge().get()) {
                 deps.addProvider(
                         forgeUniversalConfiguration.getName(),
                         mcExt.getForgeVersion()
                                 .map(forgeVer -> String.format("net.minecraftforge:forge:%s:universal", forgeVer)));
 
                 taskPatchDecompiledJar.configure(task -> {
-                    if (mcMinor <= 8) {
+                    if (mcMinor == 7) {
                         task.getPatches().from(userdevFile("fmlpatches.zip"));
                     }
                     task.getInjectionDirectories().from(userdevDir("src/main/java"));
@@ -1000,7 +1054,7 @@ public class MCPTasks extends SharedMCPTasks<MinecraftExtension> {
                 case "1.7.10" -> {
                     deps.add(PATCHED_MC_CFG, "org.ow2.asm:asm-debug-all:5.0.3");
                 }
-                case "1.12.2" -> {
+                case "1.8.9", "1.12.2" -> {
                     deps.add(PATCHED_MC_CFG, "org.ow2.asm:asm-debug-all:5.2");
                     deps.add(PATCHED_MC_CFG, "org.jline:jline:3.5.1");
                     deps.add(PATCHED_MC_CFG, "lzma:lzma:0.0.1");
@@ -1015,10 +1069,10 @@ public class MCPTasks extends SharedMCPTasks<MinecraftExtension> {
                 deobfuscationATs.from(userdevDir(Constants.PATH_USERDEV_FORGE_ACCESS_TRANFORMER));
 
                 taskPatchDecompiledJar.configure(task -> {
-                    if (mcMinor <= 8) {
-                        task.getPatches().from(userdevFile("forgepatches.zip"));
-                    } else {
-                        task.getPatches().from(userdevFile("patches.zip"));
+                    switch(mcMinor) {
+                        case 7 -> task.getPatches().from(userdevFile("forgepatches.zip"));
+                        case 8, 12 -> task.getPatches().from(userdevFile("patches.zip"));
+                        default -> throw new UnsupportedOperationException("Unsupported MC minor " + mcMinor);
                     }
                 });
             }

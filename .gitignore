@@ -4,6 +4,7 @@ bin/
 /.idea/
 /.vscode/
 /plugin/gradle
+/plugin/.idea
 /run/
 /plugin/run/
 /testmod/run/

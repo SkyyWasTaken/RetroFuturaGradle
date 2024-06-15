@@ -19,5 +19,6 @@ plugins {
 }
 
 include("testmod")
+include("testmod1.8.9")
 include("testmod1.12")
 include("testdepmod")

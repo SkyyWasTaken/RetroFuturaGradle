@@ -22,6 +22,18 @@ public final class Constants {
     // Debug toggles for local development
     public static final boolean DEBUG_NO_TMP_CLEANUP = false;
 
+    public static final List<String> FG21_MERGE_CONFIG = ImmutableList.of(
+            "^org/bouncycastle",
+            "^org/apache",
+            "^com/google",
+            "^com/mojang/authlib",
+            "^com/mojang/util",
+            "^gnu/trove",
+            "^io/netty",
+            "^javax/annotation",
+            "^argo"
+    );
+
     public static final List<String> FG23_MERGE_CONFIG = ImmutableList.of(
             "^org/bouncycastle",
             "^org/apache",

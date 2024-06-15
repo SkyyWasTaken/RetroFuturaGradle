@@ -63,6 +63,11 @@ val fg12Emulation: Configuration by configurations.creating {
     isCanBeResolved = true
 }
 
+val fg21Emulation: Configuration by configurations.creating {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+}
+
 val fg23Emulation: Configuration by configurations.creating {
     isCanBeConsumed = false
     isCanBeResolved = true
@@ -76,6 +81,14 @@ dependencies {
     fg12Emulation("de.oceanlabs.mcp:mcinjector:3.2-SNAPSHOT")
     fg12Emulation("net.minecraftforge.srg2source:Srg2Source:3.2-SNAPSHOT")
     fg12Emulation("org.eclipse.jdt:org.eclipse.jdt.core") { version { strictly("3.10.0") } }
+
+    fg21Emulation("org.ow2.asm:asm-debug-all") { version { strictly("5.0.3") } }
+    fg21Emulation("com.github.abrarsyed.jastyle:jAstyle:1.3")
+    fg21Emulation("com.nothome:javaxdelta:2.0.1")
+    fg21Emulation("net.md-5:SpecialSource:1.7.4")
+    fg21Emulation("de.oceanlabs.mcp:mcinjector:3.4-SNAPSHOT")
+    fg21Emulation("net.minecraftforge:fernflower:2.0-SNAPSHOT")
+    fg21Emulation("org.eclipse.jdt:org.eclipse.jdt.core") { version { strictly("3.10.0") } }
 
     fg23Emulation("org.ow2.asm:asm") { version { strictly("6.0") } }
     fg23Emulation("org.ow2.asm:asm-commons") { version { strictly("6.0") } }
@@ -97,6 +110,14 @@ val fg12EmuJar = tasks.register<ShadowJar>("fg12EmuJar") {
     exclude("META-INF/*.SF", "META-INF/*.RSA")
 }
 
+val fg21EmuJar = tasks.register<ShadowJar>("fg21EmuJar") {
+    archiveClassifier.set("fg21")
+    isEnableRelocation = true
+    relocationPrefix = "com.gtnewhorizons.retrofuturagradle.fg21shadow"
+    configurations.add(fg21Emulation)
+    exclude("META-INF/*.SF", "META-INF/*.RSA")
+}
+
 val fg23EmuJar = tasks.register<ShadowJar>("fg23EmuJar") {
     archiveClassifier.set("fg23")
     isEnableRelocation = true
@@ -113,10 +134,11 @@ tasks.jar {
 }
 
 val allJar by tasks.registering(Jar::class) {
-    dependsOn(fg12EmuJar, fg23EmuJar)
+    dependsOn(fg12EmuJar, fg21EmuJar, fg23EmuJar)
     // If the classifier is blank, IntelliJ fails to recognize the classes from this jar
     archiveClassifier.set("all")
     from(zipTree(fg12EmuJar.get().archiveFile.get()))
+    from(zipTree(fg21EmuJar.get().archiveFile.get()))
     from(zipTree(fg23EmuJar.get().archiveFile.get()))
     duplicatesStrategy = DuplicatesStrategy.WARN
     exclude("about_files", "about_files/**")

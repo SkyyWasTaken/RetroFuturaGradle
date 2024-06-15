@@ -5,9 +5,9 @@ import org.jetbrains.gradle.ext.RunConfigurationContainer
 plugins {
   id("java-library")
   id("maven-publish")
-  id("org.jetbrains.gradle.plugin.idea-ext") version "1.1.7"
+  id("org.jetbrains.gradle.plugin.idea-ext") version "1.1.8"
   id("eclipse")
-  id("com.gtnewhorizons.retrofuturagradle") version "1.3.33"
+  id("com.gtnewhorizons.retrofuturagradle") version "1.4.0"
 }
 
 // Project properties
